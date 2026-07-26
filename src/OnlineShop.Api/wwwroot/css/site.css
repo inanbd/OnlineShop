@@ -1,0 +1,140 @@
+/*
+   A thin layer over Bootstrap 5. Bootstrap supplies the components; this file
+   only adds what the shop needs on top of them.
+*/
+
+:root {
+    --shop-surface: #ffffff;
+    --shop-muted: #6c757d;
+}
+
+html {
+    position: relative;
+    min-height: 100%;
+}
+
+body {
+    margin-bottom: 60px;
+    background-color: #f6f7f9;
+}
+
+main {
+    padding-bottom: 2rem;
+}
+
+/* Sticks the footer to the bottom on short pages. */
+.footer {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    white-space: nowrap;
+    line-height: 60px;
+}
+
+/* ---------- Consistency badges ----------
+   The read/write split is the point of this codebase, so screens say out loud
+   which database served them. */
+
+.consistency-badge {
+    font-size: .7rem;
+    font-weight: 600;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+}
+
+.consistency-badge--replica {
+    background-color: #e7f1ff;
+    color: #0a58ca;
+}
+
+.consistency-badge--primary {
+    background-color: #fff3cd;
+    color: #997404;
+}
+
+/* ---------- Catalog ---------- */
+
+.product-card {
+    height: 100%;
+    transition: box-shadow .15s ease-in-out;
+}
+
+.product-card:hover {
+    box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .1);
+}
+
+.product-thumb {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 140px;
+    background: linear-gradient(135deg, #eef1f5, #dfe4ea);
+    color: #adb5bd;
+    font-size: 2.5rem;
+    border-top-left-radius: var(--bs-card-inner-border-radius);
+    border-top-right-radius: var(--bs-card-inner-border-radius);
+}
+
+.price {
+    font-variant-numeric: tabular-nums;
+}
+
+/* Money and quantity columns line up when digits are the same width. */
+.table td.numeric,
+.table th.numeric {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Dashboard ---------- */
+
+.stat-card .stat-value {
+    font-size: 1.75rem;
+    font-weight: 600;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+}
+
+.stat-card .stat-label {
+    font-size: .8rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--shop-muted);
+}
+
+/* Pure-CSS trend bars: a chart library would be a dependency for very little. */
+.trend {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 90px;
+}
+
+.trend-bar {
+    flex: 1 1 0;
+    min-width: 4px;
+    background-color: #0d6efd;
+    border-radius: 2px 2px 0 0;
+    opacity: .85;
+}
+
+.trend-bar:hover {
+    opacity: 1;
+}
+
+/* ---------- Storefront ---------- */
+
+.shop-header {
+    background: #fff;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.cart-quantity {
+    width: 5.5rem;
+}
+
+.empty-state {
+    padding: 3rem 1rem;
+    text-align: center;
+    color: var(--shop-muted);
+}

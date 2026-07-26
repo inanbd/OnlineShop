@@ -1,0 +1,59 @@
+@page
+@model OnlineShop.Api.Pages.Manage.Shops.CreateModel
+@{
+    ViewData["Title"] = "New shop";
+}
+
+<div class="row">
+    <div class="col-lg-6">
+        <h1 class="h4 mb-3">New shop</h1>
+
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.Name" class="form-label"></label>
+                        <input asp-for="Input.Name" class="form-control" autofocus />
+                        <span asp-validation-for="Input.Name" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.Slug" class="form-label"></label>
+                        <div class="input-group">
+                            <span class="input-group-text">/shop/</span>
+                            <input asp-for="Input.Slug" class="form-control" />
+                        </div>
+                        <span asp-validation-for="Input.Slug" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.CurrencyCode" class="form-label"></label>
+                        <select asp-for="Input.CurrencyCode" class="form-select">
+                            @foreach (var currency in CurrencyOptions.Supported)
+                            {
+                                <option value="@currency">@currency</option>
+                            }
+                        </select>
+                        <span asp-validation-for="Input.CurrencyCode" class="text-danger small"></span>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Create shop</button>
+                        <a asp-page="Index" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <p class="text-muted small mt-3">
+            The shop and your owner membership are written under one transaction, so a shop can never
+            exist without someone able to administer it.
+        </p>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

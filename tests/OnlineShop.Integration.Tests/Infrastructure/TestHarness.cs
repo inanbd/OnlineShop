@@ -65,6 +65,10 @@ public sealed class TestHarness : IAsyncDisposable
         services.AddSingleton<ITenantContext>(tenantContext);
         services.AddSingleton<IDateTimeProvider>(clock);
 
+        // The Dapper-backed Identity stores, exercised through the same wiring
+        // the host uses.
+        services.AddDapperIdentityStores();
+
         return new TestHarness(services.BuildServiceProvider(), tenantContext, clock);
     }
 

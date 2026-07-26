@@ -1,9 +1,12 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OnlineShop.Application.Abstractions.Identity;
 using OnlineShop.Application.Abstractions.Persistence;
 using OnlineShop.Application.Abstractions.Persistence.Queries;
 using OnlineShop.Application.Abstractions.Persistence.Repositories;
 using OnlineShop.Persistence.Connections;
+using OnlineShop.Persistence.Identity;
 using OnlineShop.Persistence.Queries;
 using OnlineShop.Persistence.Repositories;
 using OnlineShop.Persistence.Transactions;
@@ -55,6 +58,12 @@ public static class DependencyInjection
         services.AddScoped<IOrderQueries, OrderQueries>();
         services.AddScoped<ICustomerQueries, CustomerQueries>();
         services.AddScoped<IDashboardQueries, DashboardQueries>();
+        services.AddScoped<ICartQueries, CartQueries>();
+        services.AddScoped<IShopQueries, ShopQueries>();
+
+        // Public storefront routing. The one read that is not tenant-scoped,
+        // because it is what resolves the tenant. See IShopDirectory.
+        services.AddScoped<IShopDirectory, ShopDirectory>();
 
         // Write repositories -> the caller's transaction. These are stateless
         // and hold no connection, so a single instance is safe.
@@ -63,6 +72,24 @@ public static class DependencyInjection
         services.AddSingleton<IShopRepository, ShopRepository>();
         services.AddSingleton<ICustomerRepository, CustomerRepository>();
         services.AddSingleton<IInventoryRepository, InventoryRepository>();
+        services.AddSingleton<ITenantRepository, TenantRepository>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the Dapper-backed ASP.NET Core Identity stores.
+    /// </summary>
+    /// <remarks>
+    /// Call this instead of <c>AddEntityFrameworkStores</c>. Identity is the one
+    /// place that reads through the write connection on purpose: authentication
+    /// must not be decided from a replica that has yet to see a password change
+    /// or a lockout.
+    /// </remarks>
+    public static IServiceCollection AddDapperIdentityStores(this IServiceCollection services)
+    {
+        services.AddScoped<IUserStore<AppUser>, DapperUserStore>();
+        services.AddScoped<IRoleStore<AppRole>, DapperRoleStore>();
 
         return services;
     }

@@ -1,0 +1,93 @@
+@using OnlineShop.Api.Identity
+@using OnlineShop.Application.Abstractions.Identity
+@{
+    var isSignedIn = User.Identity?.IsAuthenticated == true;
+    var isMerchant = User.IsInRole(AppRoles.Merchant);
+    var displayName = User.DisplayName();
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] &middot; OnlineShop</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="d-flex flex-column">
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <div class="container">
+                <a class="navbar-brand" asp-page="/Index">OnlineShop</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#mainNav" aria-controls="mainNav"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="mainNav">
+                    <ul class="navbar-nav me-auto">
+                        @if (isMerchant)
+                        {
+                            <li class="nav-item"><a class="nav-link" asp-page="/Manage/Index">Dashboard</a></li>
+                            <li class="nav-item"><a class="nav-link" asp-page="/Manage/Products/Index">Products</a></li>
+                            <li class="nav-item"><a class="nav-link" asp-page="/Manage/Orders/Index">Orders</a></li>
+                            <li class="nav-item"><a class="nav-link" asp-page="/Manage/Shops/Index">Shops</a></li>
+                        }
+                        <li class="nav-item"><a class="nav-link" asp-page="/Shops/Index">Browse shops</a></li>
+                    </ul>
+                    <ul class="navbar-nav">
+                        @if (isSignedIn)
+                        {
+                            <li class="nav-item">
+                                <span class="navbar-text me-2">@displayName</span>
+                            </li>
+                            <li class="nav-item">
+                                <form method="post" asp-page="/Account/Logout" class="d-inline">
+                                    <button type="submit" class="btn btn-outline-light btn-sm">Sign out</button>
+                                </form>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item"><a class="nav-link" asp-page="/Account/Login">Sign in</a></li>
+                            <li class="nav-item"><a class="nav-link" asp-page="/Account/Register">Register</a></li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main role="main" class="flex-shrink-0">
+        <div class="container mt-4">
+            @if (TempData["StatusMessage"] is string status && !string.IsNullOrEmpty(status))
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    @status
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+            @if (TempData["ErrorMessage"] is string error && !string.IsNullOrEmpty(error))
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    @error
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+            @RenderBody()
+        </div>
+    </main>
+
+    <footer class="footer text-muted border-top bg-white">
+        <div class="container">
+            <span class="small">
+                Queries read <code>ReadConnection</code>; commands write <code>WriteConnection</code>.
+            </span>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

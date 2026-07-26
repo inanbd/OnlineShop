@@ -1,0 +1,40 @@
+@model OnlineShop.Api.Pages.Manage.ManagePageModel
+@*
+    Shop switcher shown across the back-office. A tenant may own several shops,
+    and the choice travels in the query string so every URL stays shareable.
+*@
+
+@if (Model.Shops.Count > 0)
+{
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+        <span class="text-muted small text-uppercase">Shop</span>
+
+        @if (Model.Shops.Count == 1)
+        {
+            <span class="badge bg-secondary">@Model.Shops[0].Name</span>
+        }
+        else
+        {
+            <div class="btn-group btn-group-sm" role="group" aria-label="Choose shop">
+                @foreach (var shop in Model.Shops)
+                {
+                    var isCurrent = Model.CurrentShop?.Id == shop.Id;
+                    <a class="btn @(isCurrent ? "btn-primary" : "btn-outline-secondary")"
+                       asp-route-shopId="@shop.Id">@shop.Name</a>
+                }
+            </div>
+        }
+
+        @if (Model.CurrentShop is not null)
+        {
+            <a class="btn btn-sm btn-outline-secondary ms-auto"
+               asp-page="/Storefront/Index" asp-route-slug="@Model.CurrentShop.Slug">
+                View storefront
+            </a>
+            <a class="btn btn-sm btn-outline-secondary"
+               asp-page="/Manage/Shops/Members" asp-route-shopId="@Model.CurrentShop.Id">
+                Members
+            </a>
+        }
+    </div>
+}

@@ -1,0 +1,104 @@
+@page
+@model OnlineShop.Api.Pages.Manage.Orders.IndexModel
+@{
+    ViewData["Title"] = "Orders";
+}
+
+<partial name="_ManageHeader" model="Model" />
+
+@if (Model.CurrentShop is null)
+{
+    <div class="card"><div class="card-body empty-state">
+        <h2 class="h5">No shops yet</h2>
+        <a asp-page="/Manage/Shops/Create" class="btn btn-primary">Create a shop</a>
+    </div></div>
+    return;
+}
+
+<h1 class="h4 mb-3">
+    Orders
+    <partial name="_ConsistencyBadge" model="Model.Consistency" />
+</h1>
+
+<form method="get" class="row g-2 mb-3">
+    <input type="hidden" name="shopId" value="@Model.CurrentShop.Id" />
+    <div class="col-sm-5 col-md-4">
+        <input name="orderNumber" value="@Model.OrderNumber" class="form-control" placeholder="Order number" />
+    </div>
+    <div class="col-sm-4 col-md-3">
+        <select name="status" class="form-select">
+            <option value="">Any status</option>
+            @foreach (var status in Enum.GetValues<OrderStatus>())
+            {
+                <option value="@status" selected="@(Model.Status == status)">@status</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-outline-secondary">Filter</button>
+    </div>
+</form>
+
+@if (Model.Orders.TotalCount == 0)
+{
+    <div class="card"><div class="card-body empty-state">
+        <p class="mb-0">No orders yet.</p>
+    </div></div>
+}
+else
+{
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Order</th>
+                        <th>Placed</th>
+                        <th>Customer</th>
+                        <th>Status</th>
+                        <th class="numeric">Items</th>
+                        <th class="numeric">Total</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in Model.Orders.Items)
+                    {
+                        <tr>
+                            <td><code>@order.OrderNumber</code></td>
+                            <td class="small">@order.PlacedAt.ToString("d MMM yyyy HH:mm")</td>
+                            <td class="small">@order.CustomerEmail</td>
+                            <td><partial name="_OrderStatusBadge" model="order.Status" /></td>
+                            <td class="numeric">@order.ItemCount</td>
+                            <td class="numeric">@order.GrandTotal.ToString("N2") @order.CurrencyCode</td>
+                            <td class="text-end">
+                                <a asp-page="Details" asp-route-id="@order.Id" asp-route-shopId="@Model.CurrentShop.Id"
+                                   class="btn btn-sm btn-outline-secondary">View</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    @if (Model.Orders.TotalPages > 1)
+    {
+        <nav class="mt-3">
+            <ul class="pagination pagination-sm">
+                @for (var pageNumber = 1; pageNumber <= Model.Orders.TotalPages; pageNumber++)
+                {
+                    <li class="page-item @(pageNumber == Model.Orders.Page ? "active" : "")">
+                        <a class="page-link"
+                           asp-route-shopId="@Model.CurrentShop.Id"
+                           asp-route-status="@Model.Status"
+                           asp-route-orderNumber="@Model.OrderNumber"
+                           asp-route-page="@pageNumber">@pageNumber</a>
+                    </li>
+                }
+            </ul>
+        </nav>
+    }
+
+    <p class="text-muted small mt-2">@Model.Orders.TotalCount order(s)</p>
+}

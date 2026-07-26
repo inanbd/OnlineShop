@@ -380,6 +380,92 @@ CREATE TABLE dbo.ShopOrderSequences
 GO
 
 /* ------------------------------------------------------------------ */
+/* Identity                                                           */
+/* ------------------------------------------------------------------ */
+
+/*
+    ASP.NET Core Identity, stored through Dapper.
+
+    Identity ships an Entity Framework store by default, which rule 1 rules
+    out, so these tables back a hand-written IUserStore/IRoleStore pair in
+    OnlineShop.Persistence.Identity.
+
+    Roles are global rather than tenant-scoped: "Merchant" and "Shopper"
+    describe what kind of account this is, not anything a tenant owns.
+*/
+
+CREATE TABLE dbo.Roles
+(
+    Id               uniqueidentifier NOT NULL CONSTRAINT PK_Roles PRIMARY KEY CLUSTERED,
+    Name             nvarchar(64)     NOT NULL,
+    NormalizedName   nvarchar(64)     NOT NULL,
+    ConcurrencyStamp nvarchar(100)    NULL,
+
+    CONSTRAINT UQ_Roles_NormalizedName UNIQUE (NormalizedName)
+);
+GO
+
+/*
+    Sign-in happens before any tenant is known, so the login identifier has to
+    be unique across the whole installation rather than per tenant. Every other
+    lookup of a user is tenant-scoped.
+*/
+CREATE TABLE dbo.Users
+(
+    Id                 uniqueidentifier  NOT NULL,
+    TenantId           uniqueidentifier  NOT NULL,
+    Email              nvarchar(320)     NOT NULL,
+    NormalizedEmail    nvarchar(320)     NOT NULL,
+    UserName           nvarchar(320)     NOT NULL,
+    NormalizedUserName nvarchar(320)     NOT NULL,
+    DisplayName        nvarchar(200)     NOT NULL,
+    PasswordHash       nvarchar(max)     NULL,
+    SecurityStamp      nvarchar(100)     NULL,
+    ConcurrencyStamp   nvarchar(100)     NULL,
+    EmailConfirmed     bit               NOT NULL CONSTRAINT DF_Users_EmailConfirmed DEFAULT 0,
+    LockoutEnabled     bit               NOT NULL CONSTRAINT DF_Users_LockoutEnabled DEFAULT 1,
+    LockoutEnd         datetimeoffset(3) NULL,
+    AccessFailedCount  int               NOT NULL CONSTRAINT DF_Users_AccessFailed DEFAULT 0,
+
+    -- Set for shoppers, so a signed-in customer maps onto their Customer row.
+    ShopId             uniqueidentifier  NULL,
+    CustomerId         uniqueidentifier  NULL,
+
+    CreatedAt          datetime2(3)      NOT NULL CONSTRAINT DF_Users_CreatedAt DEFAULT SYSUTCDATETIME(),
+    UpdatedAt          datetime2(3)      NOT NULL CONSTRAINT DF_Users_UpdatedAt DEFAULT SYSUTCDATETIME(),
+
+    CONSTRAINT PK_Users PRIMARY KEY NONCLUSTERED (Id),
+    CONSTRAINT UQ_Users_Tenant_Id UNIQUE CLUSTERED (TenantId, Id),
+    CONSTRAINT UQ_Users_NormalizedEmail UNIQUE (NormalizedEmail),
+    CONSTRAINT UQ_Users_NormalizedUserName UNIQUE (NormalizedUserName),
+    CONSTRAINT FK_Users_Tenants FOREIGN KEY (TenantId) REFERENCES dbo.Tenants (Id),
+
+    -- Composite, so a user can never be attached to another tenant's customer.
+    -- Not enforced while CustomerId is NULL, which is the merchant case.
+    CONSTRAINT FK_Users_Customers FOREIGN KEY (TenantId, CustomerId) REFERENCES dbo.Customers (TenantId, Id),
+    CONSTRAINT FK_Users_Shops FOREIGN KEY (TenantId, ShopId) REFERENCES dbo.Shops (TenantId, Id)
+);
+GO
+
+CREATE TABLE dbo.UserRoles
+(
+    UserId uniqueidentifier NOT NULL,
+    RoleId uniqueidentifier NOT NULL,
+
+    CONSTRAINT PK_UserRoles PRIMARY KEY CLUSTERED (UserId, RoleId),
+    CONSTRAINT FK_UserRoles_Users FOREIGN KEY (UserId) REFERENCES dbo.Users (Id),
+    CONSTRAINT FK_UserRoles_Roles FOREIGN KEY (RoleId) REFERENCES dbo.Roles (Id)
+);
+GO
+
+-- Reference data. Fixed identifiers keep them stable across environments.
+INSERT INTO dbo.Roles (Id, Name, NormalizedName, ConcurrencyStamp)
+VALUES
+    ('9f1d1f27-0f2a-4a55-9d1e-2f6a1c3b4d51', 'Merchant', 'MERCHANT', NEWID()),
+    ('3c7b8e64-5a11-4f0c-8c2d-9b7e5a1d3f42', 'Shopper',  'SHOPPER',  NEWID());
+GO
+
+/* ------------------------------------------------------------------ */
 /* Read replica notes                                                 */
 /* ------------------------------------------------------------------ */
 

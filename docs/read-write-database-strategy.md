@@ -439,7 +439,65 @@ each mutation was caught by several tests.
 
 ---
 
-## 10. Adding to the codebase
+## 10. The UI, and the two places it bends the rules
+
+The Razor Pages front end lives in the same host and process as the JSON API and
+calls MediatR directly, so everything above applies to it unchanged: a page that
+sends a query gets the replica, a page that sends a command gets the primary,
+and the guard stops either from doing otherwise. `LayeringTests` holds page
+models to the same no-connection rule as the API endpoints.
+
+Two additions were needed, and both are deliberate exceptions recorded in tests.
+
+### Identity reads the primary
+
+ASP.NET Core Identity ships an Entity Framework store, which rule 1 forbids, so
+`IUserStore` and `IRoleStore` are implemented over Dapper in
+`OnlineShop.Persistence/Identity`.
+
+Those stores use `CreateWriteConnection()` for **reads as well as writes**. That
+is not an oversight. Authentication decides whether someone gets in: a replica
+thirty seconds behind would happily accept a password that has just been
+changed, or admit an account that has just been locked out. Staleness in a
+security principal is a security bug. These calls run outside any MediatR
+request, so the CQRS scope is `Unspecified` and the guard permits either
+connection — the choice is made explicitly in the store rather than left to the
+guard.
+
+The `Users` table is tenant-owned and every statement touching it by tenant is
+filtered. The three sign-in lookups (by id, username, email) cannot be: they run
+*before* a tenant is known, and the user row is what carries the tenant. The
+role tables are global reference data. All of these are listed by name, with
+reasons, in `TenantIsolationSqlTests`.
+
+### The storefront resolves its own tenant
+
+A shopper arriving at `/shop/acme` has no tenant. `IShopDirectory` performs the
+single cross-tenant lookup in the application, resolving that slug to a tenant
+and shop, and storefront pages publish the result to `ITenantContext` for the
+rest of the request. Every read and write after that point is tenant-filtered as
+usual.
+
+The slug comes from the URL; the **tenant comes from the database row that slug
+resolved to**, so a caller cannot name a tenant of their choosing. The directory
+exposes only what a shop front already discloses publicly — name, slug, currency,
+a product count. It is the only tenant-agnostic read model in the application,
+and `LayeringTests.Only_the_storefront_directory_is_tenant_agnostic` fails the
+build if a second one appears.
+
+### Where the badge comes from
+
+Every page renders `replica · eventual` or `primary · strong`. The pages that
+show `primary` are exactly the read-after-write cases: the basket immediately
+after adding or changing a line, the product editor immediately after a save,
+the shop list immediately after creating a shop, the member list immediately
+after an invitation, and the order confirmation immediately after checkout.
+Everything else — catalog browsing, order history, the dashboard — shows
+`replica`.
+
+---
+
+## 11. Adding to the codebase
 
 **A new read.** Add a method to the relevant `I*Queries` interface taking
 `Guid tenantId`. Implement it with `CreateReadConnection()`. Include

@@ -1,0 +1,84 @@
+@page "/shop/{slug}/product/{id:guid}"
+@model OnlineShop.Api.Pages.Storefront.ProductModel
+@{
+    var product = Model.Product;
+    ViewData["Title"] = product?.Name ?? "Product";
+    var currency = product?.CurrencyCode ?? "USD";
+}
+
+<partial name="_StorefrontHeader" model="Model" />
+
+@if (product is null)
+{
+    <div class="alert alert-warning">Product not found.</div>
+    return;
+}
+
+<div class="row g-4">
+    <div class="col-md-5">
+        <div class="card">
+            <div class="product-thumb" style="height:260px;font-size:5rem;">
+                @product.Name.Substring(0, 1).ToUpperInvariant()
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        <h1 class="h3 mb-1">@product.Name</h1>
+        <p class="text-muted"><code>@product.Sku</code></p>
+
+        <p class="h4 price mb-3">@product.Price.ToString("N2") @currency</p>
+
+        @if (!string.IsNullOrWhiteSpace(product.Description))
+        {
+            <p>@product.Description</p>
+        }
+
+        @if (product.QuantityAvailable <= 0)
+        {
+            <div class="alert alert-secondary">Out of stock.</div>
+        }
+        else
+        {
+            <p class="small text-muted">@product.QuantityAvailable available</p>
+
+            @if (Model.CanShop)
+            {
+                <form method="post" asp-page-handler="Add"
+                      asp-route-slug="@Model.Shop!.Slug" asp-route-id="@product.Id"
+                      class="d-flex gap-2 align-items-end">
+                    <div>
+                        <label asp-for="Quantity" class="form-label small">Quantity</label>
+                        <input asp-for="Quantity" type="number" min="1"
+                               max="@product.QuantityAvailable" class="form-control cart-quantity" />
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add to basket</button>
+                </form>
+            }
+            else if (User.Identity?.IsAuthenticated == true)
+            {
+                <div class="alert alert-info small mb-0">
+                    You are signed in with an account from another shop. Register with this shop to buy here.
+                    <a asp-page="Register" asp-route-slug="@Model.Shop!.Slug">Register</a>
+                </div>
+            }
+            else
+            {
+                <a asp-page="Register" asp-route-slug="@Model.Shop!.Slug" class="btn btn-primary">
+                    Register to buy
+                </a>
+            }
+        }
+
+        <hr class="my-4" />
+        <p class="small text-muted mb-0">
+            This page was served from the read replica. The basket page you land on after adding an
+            item is read from the primary instead, because the line is written milliseconds earlier
+            and the replica may not have it yet.
+        </p>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

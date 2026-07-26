@@ -1,0 +1,85 @@
+@page "/shop/{slug}/checkout"
+@model OnlineShop.Api.Pages.Storefront.CheckoutModel
+@{
+    ViewData["Title"] = "Checkout";
+    var cart = Model.Cart;
+    var currency = cart?.CurrencyCode ?? "USD";
+    var slug = Model.Shop?.Slug ?? string.Empty;
+}
+
+<partial name="_StorefrontHeader" model="Model" />
+
+@if (cart is null || cart.IsEmpty)
+{
+    <div class="alert alert-warning">Your basket is empty.</div>
+    return;
+}
+
+<h1 class="h4 mb-3">Checkout</h1>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="h6 mb-3">Order summary</h2>
+                <table class="table table-sm align-middle mb-0">
+                    <tbody>
+                        @foreach (var line in cart.Lines)
+                        {
+                            <tr>
+                                <td>
+                                    @line.ProductName
+                                    <span class="text-muted small">&times; @line.Quantity</span>
+                                </td>
+                                <td class="numeric">@line.LineTotal.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th>Total</th>
+                            <th class="numeric">@cart.Subtotal.ToString("N2") @currency</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="h6 mb-3">Payment</h2>
+                <p class="small text-muted">
+                    No real payment provider is wired up. Placing the order records an authorised
+                    payment against a demo reference.
+                </p>
+
+                <form method="post" asp-route-slug="@slug">
+                    <button type="submit" class="btn btn-primary w-100">
+                        Place order &mdash; @cart.Subtotal.ToString("N2") @currency
+                    </button>
+                </form>
+
+                <a asp-page="Cart" asp-route-slug="@slug" class="btn btn-link w-100 mt-2">Back to basket</a>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-body">
+                <h2 class="h6">What happens next</h2>
+                <ol class="small text-muted mb-0 ps-3">
+                    <li>Order and line items are written</li>
+                    <li>Stock is reserved</li>
+                    <li>The payment record is created</li>
+                    <li>Your basket is closed</li>
+                    <li>The status history is recorded</li>
+                </ol>
+                <p class="small text-muted mt-2 mb-0">
+                    All five happen inside one transaction on the primary. If stock runs out at
+                    step two, none of it is kept.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>

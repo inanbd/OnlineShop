@@ -1,5 +1,6 @@
 using OnlineShop.Api;
 using OnlineShop.Api.Endpoints;
+using OnlineShop.Api.Identity;
 using OnlineShop.Api.Tenancy;
 using OnlineShop.Application;
 using OnlineShop.Application.Abstractions;
@@ -10,6 +11,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHttpContextAccessor();
+
+// The UI and the JSON API share one host and one process. Razor Pages call
+// MediatR directly rather than looping back through HTTP.
+builder.Services.AddRazorPages(options =>
+{
+    options.Conventions.AuthorizeFolder("/Manage", IdentitySetup.MerchantPolicy);
+});
 
 var tenancyOptions = builder.Configuration
     .GetSection(TenancyOptions.SectionName)
@@ -45,6 +53,9 @@ builder.Services.AddPersistence(options =>
         builder.Configuration.GetValue("Persistence:EnforceCqrsConnectionRule", defaultValue: true);
 });
 
+// Identity over the Dapper stores, not Entity Framework.
+builder.Services.AddOnlineShopIdentity();
+
 var app = builder.Build();
 
 app.UseOnlineShopExceptionHandler();
@@ -54,6 +65,18 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+else
+{
+    app.UseHsts();
+}
+
+app.UseStaticFiles();
+app.UseRouting();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapRazorPages();
 
 app.MapCatalogEndpoints();
 app.MapOrderEndpoints();

@@ -1,0 +1,32 @@
+@model OnlineShop.Api.Pages.Storefront.StorefrontPageModel
+@{
+    var shop = Model.Shop;
+}
+
+@if (shop is not null)
+{
+    <div class="shop-header rounded mb-4 p-3 d-flex flex-wrap align-items-center gap-3">
+        <div>
+            <h1 class="h5 mb-0">
+                <a class="text-decoration-none text-reset"
+                   asp-page="/Storefront/Index" asp-route-slug="@shop.Slug">@shop.Name</a>
+            </h1>
+            <span class="small text-muted">/shop/@shop.Slug &middot; @shop.CurrencyCode</span>
+        </div>
+
+        <div class="ms-auto d-flex align-items-center gap-2">
+            <partial name="_ConsistencyBadge" model="Model.Consistency" />
+
+            @if (Model.CanShop)
+            {
+                <a class="btn btn-sm btn-outline-primary"
+                   asp-page="/Storefront/Cart" asp-route-slug="@shop.Slug">Basket</a>
+            }
+            else if (User.Identity?.IsAuthenticated != true)
+            {
+                <a class="btn btn-sm btn-outline-primary"
+                   asp-page="/Storefront/Register" asp-route-slug="@shop.Slug">Register to buy</a>
+            }
+        </div>
+    </div>
+}

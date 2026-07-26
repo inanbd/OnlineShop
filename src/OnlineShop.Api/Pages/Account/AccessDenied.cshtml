@@ -1,0 +1,19 @@
+@page
+@{
+    ViewData["Title"] = "Access denied";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-7">
+        <div class="card shadow-sm">
+            <div class="card-body p-4 text-center">
+                <h1 class="h4">Access denied</h1>
+                <p class="text-muted">
+                    Your account does not have access to that area. The back-office is for merchant
+                    accounts; shopper accounts can browse and buy from any storefront.
+                </p>
+                <a asp-page="/Shops/Index" class="btn btn-primary">Browse shops</a>
+            </div>
+        </div>
+    </div>
+</div>

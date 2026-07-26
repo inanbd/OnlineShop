@@ -21,8 +21,9 @@ Full design: **[docs/read-write-database-strategy.md](docs/read-write-database-s
 src/
   OnlineShop.Domain/         aggregates and invariants; zero package references
   OnlineShop.Application/    CQRS requests, handlers, persistence ports, DTOs
-  OnlineShop.Persistence/    connections, transactions, read models, repositories
-  OnlineShop.Api/            minimal-API host; sends requests, touches no connection
+  OnlineShop.Persistence/    connections, transactions, read models, repositories,
+                             and the Dapper-backed Identity stores
+  OnlineShop.Api/            one host: Razor Pages UI + JSON API + Bootstrap assets
 tests/
   OnlineShop.Architecture.Tests/  rules and SQL syntax; no database needed
   OnlineShop.Integration.Tests/   real SQL Server, primary + replica
@@ -31,6 +32,44 @@ database/
 docs/
   read-write-database-strategy.md
 ```
+
+## The UI
+
+Server-rendered Razor Pages in the same host and the same process as the JSON
+API. Pages send MediatR requests directly — no HTTP hop — so the CQRS connection
+guard applies to them unchanged, and `LayeringTests` holds page models to the
+same no-connection rule as the API endpoints.
+
+| Area | Pages |
+| ---- | ----- |
+| Back-office (`/Manage`, merchants only) | Dashboard, product list/create/edit/delete, order list/detail/cancel, shop list/create, member invitations |
+| Storefront (`/shop/{slug}`) | Catalog with search, product detail, basket, checkout, order confirmation |
+| Accounts | Merchant registration (provisions tenant + first shop + owner), shopper registration per storefront, sign in/out |
+
+Bootstrap 5 and jQuery validation are served from `wwwroot`; nothing is fetched
+from a CDN and there is no npm build step.
+
+**Every page shows a badge saying which database served it** — `replica ·
+eventual` or `primary · strong`. The read/write split is the point of this
+codebase, so the UI states it rather than leaving it implicit. Landing on the
+basket after adding an item, the product editor after a save, or the order
+confirmation after checkout all show `primary`; browsing shows `replica`.
+
+### Two decisions worth knowing
+
+**Identity runs on a hand-written Dapper store.** ASP.NET Core Identity's
+default store is Entity Framework, which rule 1 forbids, so
+`IUserStore`/`IRoleStore` are implemented directly
+(`OnlineShop.Persistence/Identity`). Those stores read the **write** connection
+on purpose — authenticating against a replica that has not yet seen a password
+change or a lockout is a security bug, not a stale-UI annoyance.
+
+**The storefront resolves its tenant from the URL.** A shopper at `/shop/acme`
+has no tenant yet, so `IShopDirectory` performs the one deliberately global
+lookup in the application and publishes the result to `ITenantContext`. The slug
+comes from the URL; the tenant comes from the row that slug resolved to, so a
+caller cannot name a tenant of their choosing. It is the only tenant-agnostic
+read model, and a test pins that.
 
 Dependencies point inward: `Api -> Persistence -> Application -> Domain`. The
 domain knows nothing about how it is stored.
@@ -90,6 +129,9 @@ dotnet test tests/OnlineShop.Integration.Tests  # needs Docker
 | `UnitOfWorkTests` | A transaction uses the wrong connection, or fails to commit or roll back |
 | `SqlSyntaxTests` | Any statement or schema batch fails to parse under SQL Server's own T-SQL parser |
 
+Two of those rules now cover the UI as well: `Razor_pages_do_not_manage_connections_or_transactions`
+and `Only_the_storefront_directory_is_tenant_agnostic`.
+
 ### Integration tests — real SQL Server, two real databases
 
 Testcontainers starts SQL Server 2022 and creates **two** databases:
@@ -108,6 +150,9 @@ an observable fact rather than an assumption.
 | `TenantIsolationTests` | Cross-tenant reads, updates, deletes and checkouts all fail, and composite foreign keys reject cross-tenant rows at the database |
 | `QueryTests` | Every read-model statement runs and maps, including `%` and `_` treated as literals in search |
 | `RepositoryTests` | The repository methods no command reaches still execute correctly |
+| `CartTests` | Basket lines merge, quantities are absolute, and the basket read after a write needs strong consistency |
+| `IdentityStoreTests` | The Dapper user and role stores round-trip users, roles, lockout and concurrency stamps, and reject cross-tenant customer links |
+| `StorefrontTests` | Slug resolution lands on exactly one tenant, inactive shops are unreachable, and merchant provisioning is atomic |
 
 No Docker? The integration tests report themselves as **skipped**, not failed.
 Set `ONLINESHOP_TEST_SQL` to an existing server's master connection string to

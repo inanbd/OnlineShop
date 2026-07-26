@@ -1,0 +1,179 @@
+@page
+@model OnlineShop.Api.Pages.Manage.Orders.DetailsModel
+@{
+    var order = Model.Order;
+    ViewData["Title"] = order is null ? "Order" : $"Order {order.OrderNumber}";
+}
+
+<partial name="_ManageHeader" model="Model" />
+
+@if (order is null)
+{
+    <div class="alert alert-warning">Order not found.</div>
+    return;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">
+        Order <code>@order.OrderNumber</code>
+        <partial name="_ConsistencyBadge" model="Model.Consistency" />
+    </h1>
+    <a asp-page="Index" asp-route-shopId="@Model.CurrentShop?.Id" class="btn btn-outline-secondary btn-sm">Back to orders</a>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h2 class="h6 mb-3">Items</h2>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th class="numeric">Qty</th>
+                                <th class="numeric">Unit</th>
+                                <th class="numeric">Line total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in order.Items)
+                            {
+                                <tr>
+                                    <td>
+                                        @item.ProductName
+                                        <div class="small text-muted"><code>@item.Sku</code></div>
+                                    </td>
+                                    <td class="numeric">@item.Quantity</td>
+                                    <td class="numeric">@item.UnitPrice.ToString("N2")</td>
+                                    <td class="numeric">@item.LineTotal.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th colspan="3" class="text-end">Subtotal</th>
+                                <th class="numeric">@order.Subtotal.ToString("N2")</th>
+                            </tr>
+                            <tr>
+                                <th colspan="3" class="text-end">Tax</th>
+                                <th class="numeric">@order.TaxTotal.ToString("N2")</th>
+                            </tr>
+                            <tr>
+                                <th colspan="3" class="text-end">Total</th>
+                                <th class="numeric">@order.GrandTotal.ToString("N2") @order.CurrencyCode</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <p class="small text-muted mt-3 mb-0">
+                    Names, SKUs and prices are copied onto the order when it is placed, so this reads
+                    the way it was sold even if the catalog has since changed.
+                </p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <h2 class="h6 mb-3">History</h2>
+                <ul class="list-unstyled mb-0 small">
+                    @foreach (var entry in order.StatusHistory)
+                    {
+                        <li class="d-flex justify-content-between py-2 border-bottom">
+                            <span>
+                                @if (entry.FromStatus is null)
+                                {
+                                    <text>Created as</text>
+                                }
+                                else
+                                {
+                                    <text>@entry.FromStatus &rarr;</text>
+                                }
+                                <partial name="_OrderStatusBadge" model="entry.ToStatus" />
+                                @if (!string.IsNullOrWhiteSpace(entry.Reason))
+                                {
+                                    <span class="text-muted">— @entry.Reason</span>
+                                }
+                            </span>
+                            <span class="text-muted">@entry.OccurredAt.ToString("d MMM yyyy HH:mm")</span>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h2 class="h6 mb-3">Summary</h2>
+                <dl class="row small mb-0">
+                    <dt class="col-5">Status</dt>
+                    <dd class="col-7"><partial name="_OrderStatusBadge" model="order.Status" /></dd>
+                    <dt class="col-5">Placed</dt>
+                    <dd class="col-7">@order.PlacedAt.ToString("d MMM yyyy HH:mm")</dd>
+                    <dt class="col-5">Customer</dt>
+                    <dd class="col-7">@order.CustomerName<div class="text-muted">@order.CustomerEmail</div></dd>
+                    @if (order.CancelledAt is not null)
+                    {
+                        <dt class="col-5">Cancelled</dt>
+                        <dd class="col-7">
+                            @order.CancelledAt.Value.ToString("d MMM yyyy HH:mm")
+                            <div class="text-muted">@order.CancellationReason</div>
+                        </dd>
+                    }
+                </dl>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <h2 class="h6 mb-3">Payments</h2>
+                @if (order.Payments.Count == 0)
+                {
+                    <p class="small text-muted mb-0">No payment recorded.</p>
+                }
+                else
+                {
+                    <ul class="list-unstyled mb-0 small">
+                        @foreach (var payment in order.Payments)
+                        {
+                            <li class="py-1 border-bottom">
+                                <div class="d-flex justify-content-between">
+                                    <span>@payment.Provider</span>
+                                    <span class="fw-semibold">@payment.Amount.ToString("N2") @payment.CurrencyCode</span>
+                                </div>
+                                <div class="text-muted"><code>@payment.ProviderReference</code> · @payment.Status</div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+
+        @if (order.Status != OrderStatus.Cancelled && order.Status != OrderStatus.Fulfilled)
+        {
+            <div class="card border-danger-subtle">
+                <div class="card-body">
+                    <h2 class="h6">Cancel order</h2>
+                    <p class="small text-muted">
+                        Cancelling releases the reserved stock in the same transaction, so it cannot
+                        be left held against an order nobody will pay for.
+                    </p>
+                    <form method="post" asp-page-handler="Cancel"
+                          asp-route-id="@order.Id" asp-route-shopId="@Model.CurrentShop?.Id">
+                        <div class="mb-2">
+                            <input asp-for="CancelReason" class="form-control form-control-sm" placeholder="Reason" />
+                            <span asp-validation-for="CancelReason" class="text-danger small"></span>
+                        </div>
+                        <button type="submit" class="btn btn-outline-danger btn-sm w-100">Cancel order</button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

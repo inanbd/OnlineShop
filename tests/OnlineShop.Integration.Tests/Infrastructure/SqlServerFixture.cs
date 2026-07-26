@@ -47,7 +47,19 @@ public sealed class SqlServerFixture : IAsyncLifetime
         "Payments",
         "OrderStatusHistory",
         "ShopOrderSequences",
+        "Users",
+        "UserRoles",
     ];
+
+    /// <summary>
+    /// Reference data seeded by the schema, emptied by nothing.
+    /// </summary>
+    /// <remarks>
+    /// Roles are global and created by <c>schema.sql</c>. Wiping them between
+    /// tests would leave registration unable to assign anyone a role, so the
+    /// reset skips them while replication still copies them.
+    /// </remarks>
+    private static readonly string[] ReferenceTables = ["Roles"];
 
     private MsSqlContainer? _container;
     private string? _masterConnectionString;
@@ -130,6 +142,33 @@ public sealed class SqlServerFixture : IAsyncLifetime
             await connection.ExecuteAsync(
                 $"INSERT INTO [{ReplicaDatabase}].dbo.[{table}] " +
                 $"SELECT * FROM [{PrimaryDatabase}].dbo.[{table}];");
+        }
+    }
+
+    /// <summary>
+    /// Adds Identity's reference roles if they are missing.
+    /// </summary>
+    /// <remarks>
+    /// Normally seeded by <c>schema.sql</c>. This exists so a test that has
+    /// deliberately cleared them can put them back.
+    /// </remarks>
+    public async Task EnsureRolesAsync()
+    {
+        foreach (var database in new[] { PrimaryDatabase, ReplicaDatabase })
+        {
+            await using var connection = new SqlConnection(ConnectionStringFor(database));
+            await connection.OpenAsync();
+
+            await connection.ExecuteAsync(
+                """
+                IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE NormalizedName = 'MERCHANT')
+                    INSERT INTO dbo.Roles (Id, Name, NormalizedName, ConcurrencyStamp)
+                    VALUES ('9f1d1f27-0f2a-4a55-9d1e-2f6a1c3b4d51', 'Merchant', 'MERCHANT', NEWID());
+
+                IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE NormalizedName = 'SHOPPER')
+                    INSERT INTO dbo.Roles (Id, Name, NormalizedName, ConcurrencyStamp)
+                    VALUES ('3c7b8e64-5a11-4f0c-8c2d-9b7e5a1d3f42', 'Shopper', 'SHOPPER', NEWID());
+                """);
         }
     }
 

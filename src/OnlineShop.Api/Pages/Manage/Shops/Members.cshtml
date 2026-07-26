@@ -1,0 +1,92 @@
+@page
+@model OnlineShop.Api.Pages.Manage.Shops.MembersModel
+@{
+    ViewData["Title"] = "Members";
+}
+
+<partial name="_ManageHeader" model="Model" />
+
+<h1 class="h4 mb-3">
+    Members
+    <partial name="_ConsistencyBadge" model="Model.Consistency" />
+</h1>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Invited</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Members.Count == 0)
+                        {
+                            <tr><td colspan="4" class="text-center text-muted py-4">No members yet.</td></tr>
+                        }
+                        @foreach (var member in Model.Members)
+                        {
+                            <tr>
+                                <td>@member.Email</td>
+                                <td><span class="badge bg-light text-dark">@member.Role</span></td>
+                                <td>
+                                    @{
+                                        var css = member.Status switch
+                                        {
+                                            ShopMemberStatus.Active => "bg-success",
+                                            ShopMemberStatus.Invited => "bg-warning text-dark",
+                                            _ => "bg-secondary",
+                                        };
+                                    }
+                                    <span class="badge @css">@member.Status</span>
+                                </td>
+                                <td class="small text-muted">@member.InvitedAt.ToString("d MMM yyyy")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="h6 mb-3">Invite someone</h2>
+                <form method="post">
+                    <input type="hidden" name="shopId" value="@Model.CurrentShop?.Id" />
+                    <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.Email" class="form-label"></label>
+                        <input asp-for="Input.Email" class="form-control" />
+                        <span asp-validation-for="Input.Email" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.Role" class="form-label"></label>
+                        <select asp-for="Input.Role" class="form-select"
+                                asp-items="Html.GetEnumSelectList<ShopMemberRole>()">
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">Send invitation</button>
+                </form>
+
+                <p class="small text-muted mt-3 mb-0">
+                    Re-inviting someone whose access was revoked reuses their existing record, so the
+                    membership history is kept.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

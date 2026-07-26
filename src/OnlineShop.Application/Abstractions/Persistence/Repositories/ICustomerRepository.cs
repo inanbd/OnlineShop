@@ -46,4 +46,33 @@ public interface ICustomerRepository
         Guid cartId,
         IDbTransaction transaction,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Creates an empty cart.</summary>
+    Task InsertCartAsync(
+        Cart cart,
+        IDbTransaction transaction,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sets a cart line to an absolute quantity, inserting it if absent.
+    /// </summary>
+    /// <remarks>
+    /// Absolute rather than a delta, so a retried request cannot quietly double
+    /// the basket. The caller works out the new total from the loaded cart.
+    /// </remarks>
+    Task UpsertCartItemAsync(
+        Guid tenantId,
+        Guid cartId,
+        Guid productId,
+        int quantity,
+        decimal unitPrice,
+        IDbTransaction transaction,
+        CancellationToken cancellationToken = default);
+
+    Task RemoveCartItemAsync(
+        Guid tenantId,
+        Guid cartId,
+        Guid productId,
+        IDbTransaction transaction,
+        CancellationToken cancellationToken = default);
 }

@@ -15,12 +15,93 @@ namespace OnlineShop.Architecture.Tests;
 public sealed class TenantIsolationSqlTests
 {
     /// <summary>
-    /// Statements that are legitimately not tenant-scoped, each with the reason.
-    /// Empty today: every statement in the layer touches tenant-owned data.
-    /// Anything added here should be obviously global, such as a lookup of
-    /// server metadata.
+    /// The SQL constants that are legitimately not tenant-scoped, each with the
+    /// reason it cannot be.
     /// </summary>
-    private static readonly HashSet<string> GloballyScopedStatements = new(StringComparer.Ordinal);
+    /// <remarks>
+    /// Every entry is a place where there is no tenant to filter by yet, or
+    /// where the row being touched is what defines a tenant. The list is
+    /// asserted exactly by <see cref="The_documented_exceptions_are_exactly_these"/>,
+    /// so a new one cannot be added without someone changing this test and
+    /// writing down why.
+    /// </remarks>
+    private static readonly Dictionary<string, string> GloballyScopedStatements = new(StringComparer.Ordinal)
+    {
+        ["TenantRepository.SlugExistsSql"] =
+            "A tenant slug identifies the tenant itself, so uniqueness cannot be scoped to one.",
+
+        ["ShopDirectory.FindBySlugSql"] =
+            "Resolves a public storefront URL to a tenant. This is the lookup that establishes the tenant for " +
+            "the request, so there is nothing to filter by yet. It exposes only public shop identity.",
+
+        ["ShopDirectory.ListActiveSql"] =
+            "The public list of storefronts, which spans tenants by definition. Exposes only public shop identity.",
+
+        ["DapperUserStore.SelectColumns"] =
+            "A shared SELECT fragment with no WHERE clause of its own; the statements built from it carry the " +
+            "predicate.",
+
+        ["DapperUserStore.DeleteUserRolesSql"] =
+            "UserRoles has no TenantId because roles are global reference data. Keyed by the globally unique " +
+            "user id instead. The companion DeleteUserSql is tenant-filtered and is still checked.",
+
+        ["DapperUserStore.FindByIdSql"] =
+            "Authentication happens before a tenant is known; the user row is what carries the tenant.",
+
+        ["DapperUserStore.FindByNameSql"] =
+            "Sign-in by username, before any tenant is known.",
+
+        ["DapperUserStore.FindByEmailSql"] =
+            "Sign-in by email address, before any tenant is known.",
+
+        ["DapperUserStore.AddToRoleSql"] =
+            "Roles are global reference data ('Merchant', 'Shopper'), not tenant-owned.",
+
+        ["DapperUserStore.RemoveFromRoleSql"] = "Roles are global reference data.",
+        ["DapperUserStore.GetRolesSql"] = "Roles are global reference data.",
+        ["DapperUserStore.IsInRoleSql"] = "Roles are global reference data.",
+        ["DapperUserStore.GetUsersInRoleSql"] = "Roles are global reference data.",
+
+        ["DapperRoleStore.SelectColumns"] = "Roles are global reference data.",
+        ["DapperRoleStore.FindByIdSql"] = "Roles are global reference data.",
+        ["DapperRoleStore.FindByNameSql"] = "Roles are global reference data.",
+        ["DapperRoleStore.InsertSql"] = "Roles are global reference data.",
+        ["DapperRoleStore.UpdateSql"] = "Roles are global reference data.",
+        ["DapperRoleStore.DeleteSql"] = "Roles are global reference data.",
+    };
+
+    [Fact]
+    public void The_documented_exceptions_are_exactly_these()
+    {
+        // Pins the exception list. Adding a tenant-agnostic statement means
+        // editing this test, which is the point: it should never be a quiet
+        // side effect of writing a query.
+        string[] expected =
+        [
+            "DapperRoleStore.DeleteSql",
+            "DapperRoleStore.FindByIdSql",
+            "DapperRoleStore.FindByNameSql",
+            "DapperRoleStore.InsertSql",
+            "DapperRoleStore.SelectColumns",
+            "DapperRoleStore.UpdateSql",
+            "DapperUserStore.AddToRoleSql",
+            "DapperUserStore.DeleteUserRolesSql",
+            "DapperUserStore.FindByEmailSql",
+            "DapperUserStore.FindByIdSql",
+            "DapperUserStore.FindByNameSql",
+            "DapperUserStore.GetRolesSql",
+            "DapperUserStore.GetUsersInRoleSql",
+            "DapperUserStore.IsInRoleSql",
+            "DapperUserStore.RemoveFromRoleSql",
+            "DapperUserStore.SelectColumns",
+            "ShopDirectory.FindBySlugSql",
+            "ShopDirectory.ListActiveSql",
+            "TenantRepository.SlugExistsSql",
+        ];
+
+        Assert.Equal(expected, GloballyScopedStatements.Keys.OrderBy(k => k, StringComparer.Ordinal).ToArray());
+        Assert.All(GloballyScopedStatements.Values, reason => Assert.False(string.IsNullOrWhiteSpace(reason)));
+    }
 
     public static TheoryData<string, string> AllSqlStatements()
     {
@@ -41,7 +122,7 @@ public sealed class TenantIsolationSqlTests
     [MemberData(nameof(AllSqlStatements))]
     public void Every_statement_is_tenant_scoped(string owner, string statement)
     {
-        if (GloballyScopedStatements.Contains(statement))
+        if (GloballyScopedStatements.ContainsKey(owner))
         {
             return;
         }
@@ -99,8 +180,20 @@ public sealed class TenantIsolationSqlTests
     }
 
     /// <summary>
-    /// Finds every <c>const string</c> holding SQL in the queries and
-    /// repositories, including the ones on private nested types.
+    /// The persistence namespaces whose SQL is checked. Identity is included:
+    /// its stores are hand-written Dapper too, and its user table is
+    /// tenant-owned even though its role tables are not.
+    /// </summary>
+    private static readonly string[] ScannedNamespaces =
+    [
+        "OnlineShop.Persistence.Queries",
+        "OnlineShop.Persistence.Repositories",
+        "OnlineShop.Persistence.Identity",
+    ];
+
+    /// <summary>
+    /// Finds every <c>const string</c> holding SQL in the queries, repositories
+    /// and Identity stores, including the ones on private nested types.
     /// </summary>
     private static IEnumerable<(string Owner, string Sql)> SqlConstants()
     {
@@ -109,8 +202,7 @@ public sealed class TenantIsolationSqlTests
         var relevantTypes = assembly
             .GetTypes()
             .Where(type => type.Namespace is not null
-                           && (type.Namespace.StartsWith("OnlineShop.Persistence.Queries", StringComparison.Ordinal)
-                               || type.Namespace.StartsWith("OnlineShop.Persistence.Repositories", StringComparison.Ordinal)));
+                           && ScannedNamespaces.Any(ns => type.Namespace.StartsWith(ns, StringComparison.Ordinal)));
 
         foreach (var type in relevantTypes)
         {

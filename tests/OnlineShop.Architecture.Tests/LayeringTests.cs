@@ -78,6 +78,38 @@ public sealed class LayeringTests
     }
 
     [Fact]
+    public void Razor_pages_do_not_manage_connections_or_transactions()
+    {
+        // Rule 13 again, now that there is a UI. A page model sends a MediatR
+        // request and shapes the response; if one held an IDbConnection or began
+        // a transaction, the read/write routing would stop being decided by
+        // whether the request is a query or a command.
+        var offenders = ApiAssembly
+            .GetTypes()
+            .Where(type => type.Namespace?.StartsWith("OnlineShop.Api.Pages", StringComparison.Ordinal) == true)
+            .Where(type => MemberTypes(type).Any(IsConnectionConcern))
+            .Select(type => type.FullName!)
+            .ToList();
+
+        Assert.True(
+            offenders.Count == 0,
+            $"These page models touch a connection or transaction: {string.Join(", ", offenders)}. " +
+            "Pages send MediatR requests; the database is the persistence layer's business.");
+    }
+
+    [Fact]
+    public void The_ui_actually_has_page_models_to_check()
+    {
+        // Keeps the rule above from passing vacuously if the namespace moves.
+        var pageModels = ApiAssembly
+            .GetTypes()
+            .Count(type => type.Namespace?.StartsWith("OnlineShop.Api.Pages", StringComparison.Ordinal) == true
+                           && type.Name.EndsWith("Model", StringComparison.Ordinal));
+
+        Assert.True(pageModels > 10, $"Only {pageModels} page models were discovered.");
+    }
+
+    [Fact]
     public void Repositories_never_hold_a_connection_factory()
     {
         // Rule 11: a repository must use the transaction it is given, never open
@@ -153,13 +185,40 @@ public sealed class LayeringTests
             $"These read-model methods accept an IDbTransaction: {string.Join(", ", offenders)}.");
     }
 
+    /// <summary>
+    /// The single read model that is deliberately not tenant-scoped.
+    /// </summary>
+    /// <remarks>
+    /// <c>IShopDirectory</c> resolves a public storefront slug to a tenant, so
+    /// it is the lookup that <em>establishes</em> the tenant for a request and
+    /// cannot itself be filtered by one. It exposes only public shop identity.
+    /// </remarks>
+    private const string TenantAgnosticReadModel = "IShopDirectory";
+
+    [Fact]
+    public void Only_the_storefront_directory_is_tenant_agnostic()
+    {
+        // Pins the exception, so a second tenant-agnostic read model cannot be
+        // introduced without someone editing this test.
+        var tenantAgnostic = ApplicationAssembly
+            .GetTypes()
+            .Where(type => type.IsInterface
+                           && type.Namespace == "OnlineShop.Application.Abstractions.Persistence.Queries")
+            .Where(type => type.GetMethods().All(method => !method.GetParameters().Any(IsTenantIdParameter)))
+            .Select(type => type.Name)
+            .ToList();
+
+        Assert.Equal([TenantAgnosticReadModel], tenantAgnostic);
+    }
+
     [Fact]
     public void Every_read_model_method_requires_a_tenant()
     {
         var queryInterfaces = ApplicationAssembly
             .GetTypes()
             .Where(type => type.IsInterface
-                           && type.Namespace == "OnlineShop.Application.Abstractions.Persistence.Queries");
+                           && type.Namespace == "OnlineShop.Application.Abstractions.Persistence.Queries")
+            .Where(type => type.Name != TenantAgnosticReadModel);
 
         var offenders = queryInterfaces
             .SelectMany(queryInterface => queryInterface.GetMethods()

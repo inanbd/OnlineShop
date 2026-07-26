@@ -1,0 +1,59 @@
+@page "/shop/{slug}/register"
+@model OnlineShop.Api.Pages.Storefront.RegisterModel
+@{
+    ViewData["Title"] = $"Register at {Model.Shop?.Name}";
+}
+
+<partial name="_StorefrontHeader" model="Model" />
+
+<div class="row justify-content-center">
+    <div class="col-md-7 col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h1 class="h5 mb-1">Register at @Model.Shop?.Name</h1>
+                <p class="text-muted small mb-4">
+                    Your account is created within this shop's tenant.
+                </p>
+
+                <form method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.FullName" class="form-label"></label>
+                        <input asp-for="Input.FullName" class="form-control" autofocus />
+                        <span asp-validation-for="Input.FullName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.Email" class="form-label"></label>
+                        <input asp-for="Input.Email" class="form-control" autocomplete="username" />
+                        <span asp-validation-for="Input.Email" class="text-danger small"></span>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="Input.Password" class="form-label"></label>
+                            <input asp-for="Input.Password" class="form-control" autocomplete="new-password" />
+                            <span asp-validation-for="Input.Password" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Input.ConfirmPassword" class="form-label"></label>
+                            <input asp-for="Input.ConfirmPassword" class="form-control" autocomplete="new-password" />
+                            <span asp-validation-for="Input.ConfirmPassword" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary mt-4 w-100">Create account</button>
+                </form>
+
+                <p class="small text-muted mt-3 mb-0">
+                    Already registered here? <a asp-page="/Account/Login">Sign in</a>.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

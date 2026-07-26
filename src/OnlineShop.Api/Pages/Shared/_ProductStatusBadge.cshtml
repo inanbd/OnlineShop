@@ -1,0 +1,11 @@
+@model OnlineShop.Domain.Catalog.ProductStatus
+@{
+    var css = Model switch
+    {
+        OnlineShop.Domain.Catalog.ProductStatus.Active => "bg-success",
+        OnlineShop.Domain.Catalog.ProductStatus.Draft => "bg-secondary",
+        OnlineShop.Domain.Catalog.ProductStatus.Archived => "bg-dark",
+        _ => "bg-light text-dark",
+    };
+}
+<span class="badge @css">@Model</span>

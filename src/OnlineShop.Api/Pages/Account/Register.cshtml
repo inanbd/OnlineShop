@@ -1,0 +1,87 @@
+@page
+@model OnlineShop.Api.Pages.Account.RegisterModel
+@{
+    ViewData["Title"] = "Open a shop";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-9 col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h1 class="h4 mb-1">Open a shop</h1>
+                <p class="text-muted small mb-4">
+                    This creates your tenant, your first storefront and your owner account together.
+                </p>
+
+                <form method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+                    <h2 class="h6 text-uppercase text-muted mt-2 mb-3">Your business</h2>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="Input.BusinessName" class="form-label"></label>
+                            <input asp-for="Input.BusinessName" class="form-control" autofocus />
+                            <span asp-validation-for="Input.BusinessName" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Input.ShopName" class="form-label"></label>
+                            <input asp-for="Input.ShopName" class="form-control" />
+                            <span asp-validation-for="Input.ShopName" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-8">
+                            <label asp-for="Input.ShopSlug" class="form-label"></label>
+                            <div class="input-group">
+                                <span class="input-group-text">/shop/</span>
+                                <input asp-for="Input.ShopSlug" class="form-control" placeholder="acme-supplies" />
+                            </div>
+                            <span asp-validation-for="Input.ShopSlug" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="Input.CurrencyCode" class="form-label"></label>
+                            <select asp-for="Input.CurrencyCode" class="form-select">
+                                @foreach (var currency in CurrencyOptions.Supported)
+                                {
+                                    <option value="@currency">@currency</option>
+                                }
+                            </select>
+                            <span asp-validation-for="Input.CurrencyCode" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <h2 class="h6 text-uppercase text-muted mt-4 mb-3">Your account</h2>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="Input.DisplayName" class="form-label"></label>
+                            <input asp-for="Input.DisplayName" class="form-control" />
+                            <span asp-validation-for="Input.DisplayName" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Input.Email" class="form-label"></label>
+                            <input asp-for="Input.Email" class="form-control" autocomplete="username" />
+                            <span asp-validation-for="Input.Email" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Input.Password" class="form-label"></label>
+                            <input asp-for="Input.Password" class="form-control" autocomplete="new-password" />
+                            <div class="form-text">At least 8 characters, with a lowercase letter and a digit.</div>
+                            <span asp-validation-for="Input.Password" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Input.ConfirmPassword" class="form-label"></label>
+                            <input asp-for="Input.ConfirmPassword" class="form-control" autocomplete="new-password" />
+                            <span asp-validation-for="Input.ConfirmPassword" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary mt-4">Create shop</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

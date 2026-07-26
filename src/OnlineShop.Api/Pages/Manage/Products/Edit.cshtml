@@ -1,0 +1,117 @@
+@page
+@model OnlineShop.Api.Pages.Manage.Products.EditModel
+@{
+    ViewData["Title"] = Model.Product?.Name ?? "Edit product";
+    var currency = Model.Product?.CurrencyCode ?? "USD";
+}
+
+<partial name="_ManageHeader" model="Model" />
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1 class="h4 mb-0">
+                Edit product
+                <partial name="_ConsistencyBadge" model="Model.Consistency" />
+            </h1>
+            @if (Model.Product is not null)
+            {
+                <partial name="_ProductStatusBadge" model="Model.Product.Status" />
+            }
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    <input type="hidden" name="shopId" value="@Model.CurrentShop?.Id" />
+                    <input asp-for="Input.Id" type="hidden" />
+                    <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label asp-for="Input.Name" class="form-label"></label>
+                            <input asp-for="Input.Name" class="form-control" />
+                            <span asp-validation-for="Input.Name" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="Input.Sku" class="form-label"></label>
+                            <input asp-for="Input.Sku" class="form-control" />
+                            <span asp-validation-for="Input.Sku" class="text-danger small"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Input.Description" class="form-label"></label>
+                            <textarea asp-for="Input.Description" class="form-control" rows="3"></textarea>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="Input.Price" class="form-label"></label>
+                            <div class="input-group">
+                                <input asp-for="Input.Price" class="form-control" type="number" step="0.01" min="0" />
+                                <span class="input-group-text">@currency</span>
+                            </div>
+                            <span asp-validation-for="Input.Price" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Save changes</button>
+                        <a asp-page="Index" asp-route-shopId="@Model.CurrentShop?.Id" class="btn btn-outline-secondary">Back to products</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        @if (Model.Product is not null)
+        {
+            <div class="card mt-3 border-danger-subtle">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="h6 mb-1">Delete this product</h2>
+                        <p class="small text-muted mb-0">
+                            Soft delete: it is hidden from the catalog but past orders still show it
+                            as it was sold.
+                        </p>
+                    </div>
+                    <form method="post" asp-page-handler="Delete"
+                          asp-route-id="@Model.Product.Id" asp-route-shopId="@Model.CurrentShop?.Id"
+                          onsubmit="return confirm('Delete this product?');">
+                        <button type="submit" class="btn btn-outline-danger">Delete</button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="col-lg-4">
+        @if (Model.Product is not null)
+        {
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="h6 mb-3">Stock</h2>
+                    <ul class="list-unstyled mb-0 small">
+                        <li class="d-flex justify-content-between py-1 border-bottom">
+                            <span>On hand</span><span class="fw-semibold">@Model.Product.QuantityOnHand</span>
+                        </li>
+                        <li class="d-flex justify-content-between py-1 border-bottom">
+                            <span>Reserved</span><span class="fw-semibold">@Model.Product.QuantityReserved</span>
+                        </li>
+                        <li class="d-flex justify-content-between py-1">
+                            <span>Available</span>
+                            <span class="fw-semibold @(Model.Product.QuantityAvailable <= 0 ? "text-danger" : "")">
+                                @Model.Product.QuantityAvailable
+                            </span>
+                        </li>
+                    </ul>
+                    <hr />
+                    <p class="small text-muted mb-0">
+                        Reserved stock is held by pending orders. It is released automatically if an
+                        order is cancelled.
+                    </p>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

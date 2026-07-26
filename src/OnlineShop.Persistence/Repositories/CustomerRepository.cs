@@ -312,6 +312,122 @@ internal sealed class CustomerRepository : ICustomerRepository
         }
     }
 
+    private const string InsertCartSql = """
+        INSERT INTO dbo.Carts (Id, TenantId, ShopId, CustomerId, Status, CreatedAt, UpdatedAt)
+        VALUES (@Id, @TenantId, @ShopId, @CustomerId, @Status, @CreatedAt, @UpdatedAt);
+        """;
+
+    public async Task InsertCartAsync(
+        Cart cart,
+        IDbTransaction transaction,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(cart);
+        TenantGuard.Require(cart.TenantId);
+
+        var connection = transaction.RequireConnection();
+
+        await connection.ExecuteAsync(
+            new CommandDefinition(
+                InsertCartSql,
+                new
+                {
+                    cart.Id,
+                    cart.TenantId,
+                    cart.ShopId,
+                    cart.CustomerId,
+                    Status = (int)cart.Status,
+                    cart.CreatedAt,
+                    cart.UpdatedAt,
+                },
+                transaction: transaction,
+                cancellationToken: cancellationToken)).ConfigureAwait(false);
+    }
+
+    /// <remarks>
+    /// One statement rather than a read followed by a branch: the unique index
+    /// on (TenantId, CartId, ProductId) means two concurrent adds of the same
+    /// product would otherwise race, and the loser would fail on a duplicate key
+    /// instead of merging.
+    /// </remarks>
+    private const string UpsertCartItemSql = """
+        MERGE dbo.CartItems WITH (HOLDLOCK) AS target
+        USING
+        (
+            SELECT @TenantId AS TenantId, @CartId AS CartId, @ProductId AS ProductId
+        ) AS source
+            ON  target.TenantId  = source.TenantId
+            AND target.CartId    = source.CartId
+            AND target.ProductId = source.ProductId
+        WHEN MATCHED THEN
+            UPDATE SET Quantity = @Quantity, UnitPrice = @UnitPrice
+        WHEN NOT MATCHED THEN
+            INSERT (Id, TenantId, CartId, ProductId, Quantity, UnitPrice)
+            VALUES (NEWID(), source.TenantId, source.CartId, source.ProductId, @Quantity, @UnitPrice);
+        """;
+
+    public async Task UpsertCartItemAsync(
+        Guid tenantId,
+        Guid cartId,
+        Guid productId,
+        int quantity,
+        decimal unitPrice,
+        IDbTransaction transaction,
+        CancellationToken cancellationToken = default)
+    {
+        TenantGuard.Require(tenantId);
+
+        if (quantity <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(quantity),
+                quantity,
+                "Use RemoveCartItemAsync to take a line out of the cart.");
+        }
+
+        var connection = transaction.RequireConnection();
+
+        await connection.ExecuteAsync(
+            new CommandDefinition(
+                UpsertCartItemSql,
+                new
+                {
+                    TenantId = tenantId,
+                    CartId = cartId,
+                    ProductId = productId,
+                    Quantity = quantity,
+                    UnitPrice = unitPrice,
+                },
+                transaction: transaction,
+                cancellationToken: cancellationToken)).ConfigureAwait(false);
+    }
+
+    private const string RemoveCartItemSql = """
+        DELETE FROM dbo.CartItems
+        WHERE TenantId  = @TenantId
+          AND CartId    = @CartId
+          AND ProductId = @ProductId;
+        """;
+
+    public async Task RemoveCartItemAsync(
+        Guid tenantId,
+        Guid cartId,
+        Guid productId,
+        IDbTransaction transaction,
+        CancellationToken cancellationToken = default)
+    {
+        TenantGuard.Require(tenantId);
+
+        var connection = transaction.RequireConnection();
+
+        await connection.ExecuteAsync(
+            new CommandDefinition(
+                RemoveCartItemSql,
+                new { TenantId = tenantId, CartId = cartId, ProductId = productId },
+                transaction: transaction,
+                cancellationToken: cancellationToken)).ConfigureAwait(false);
+    }
+
     /// <summary>Row shape of <see cref="GetByIdSql"/>.</summary>
     private sealed class CustomerRow
     {

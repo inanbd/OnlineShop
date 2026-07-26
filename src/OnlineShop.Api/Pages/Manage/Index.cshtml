@@ -1,0 +1,196 @@
+@page
+@model OnlineShop.Api.Pages.Manage.IndexModel
+@{
+    ViewData["Title"] = "Dashboard";
+    var dashboard = Model.Dashboard;
+    var currency = Model.CurrentShop?.CurrencyCode ?? "USD";
+    var maxRevenue = dashboard?.DailyRevenue.Count > 0
+        ? dashboard.DailyRevenue.Max(d => d.Revenue)
+        : 0m;
+}
+
+<partial name="_ManageHeader" model="Model" />
+
+@if (Model.CurrentShop is null)
+{
+    <div class="card">
+        <div class="card-body empty-state">
+            <h2 class="h5">No shops yet</h2>
+            <p>Create your first shop to start adding products.</p>
+            <a asp-page="/Manage/Shops/Create" class="btn btn-primary">Create a shop</a>
+        </div>
+    </div>
+    return;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">
+        Dashboard
+        <partial name="_ConsistencyBadge" model="Model.Consistency" />
+    </h1>
+    <form method="get" class="d-flex gap-2">
+        <input type="hidden" name="shopId" value="@Model.CurrentShop.Id" />
+        <select name="windowDays" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="7" selected="@(Model.WindowDays == 7)">Last 7 days</option>
+            <option value="30" selected="@(Model.WindowDays == 30)">Last 30 days</option>
+            <option value="90" selected="@(Model.WindowDays == 90)">Last 90 days</option>
+            <option value="365" selected="@(Model.WindowDays == 365)">Last year</option>
+        </select>
+    </form>
+</div>
+
+@if (dashboard is null)
+{
+    <div class="alert alert-warning">No data for this shop.</div>
+    return;
+}
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-label">Revenue</div>
+                <div class="stat-value">@dashboard.RevenueInWindow.ToString("N2") <small class="text-muted fs-6">@currency</small></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-label">Orders</div>
+                <div class="stat-value">@dashboard.OrdersInWindow</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-label">Average order</div>
+                <div class="stat-value">@dashboard.AverageOrderValue.ToString("N2")</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-label">New customers</div>
+                <div class="stat-value">@dashboard.NewCustomersInWindow</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h6 mb-3">Daily revenue</h2>
+                @if (dashboard.DailyRevenue.Count == 0)
+                {
+                    <p class="text-muted small mb-0">No orders in this window.</p>
+                }
+                else
+                {
+                    <div class="trend mb-2">
+                        @foreach (var day in dashboard.DailyRevenue)
+                        {
+                            var height = maxRevenue > 0 ? (int)Math.Round((double)(day.Revenue / maxRevenue) * 100) : 0;
+                            <div class="trend-bar"
+                                 style="height:@(Math.Max(height, 2))%"
+                                 title="@day.Day.ToString("d MMM"): @day.Revenue.ToString("N2") @currency (@day.OrderCount orders)"></div>
+                        }
+                    </div>
+                    <div class="d-flex justify-content-between small text-muted">
+                        <span>@dashboard.DailyRevenue.First().Day.ToString("d MMM")</span>
+                        <span>@dashboard.DailyRevenue.Last().Day.ToString("d MMM")</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h6 mb-3">Orders by status</h2>
+                @if (dashboard.OrdersByStatus.Count == 0)
+                {
+                    <p class="text-muted small mb-0">Nothing yet.</p>
+                }
+                else
+                {
+                    <ul class="list-unstyled mb-0">
+                        @foreach (var status in dashboard.OrdersByStatus.OrderBy(s => s.Status))
+                        {
+                            <li class="d-flex justify-content-between py-1 border-bottom">
+                                <span><partial name="_OrderStatusBadge" model="status.Status" /></span>
+                                <span class="fw-semibold">@status.Count</span>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h6 mb-3">Best sellers</h2>
+                @if (dashboard.TopProducts.Count == 0)
+                {
+                    <p class="text-muted small mb-0">No sales in this window.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="numeric">Units</th>
+                                    <th class="numeric">Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var product in dashboard.TopProducts)
+                                {
+                                    <tr>
+                                        <td>
+                                            @product.Name
+                                            <div class="small text-muted">@product.Sku</div>
+                                        </td>
+                                        <td class="numeric">@product.UnitsSold</td>
+                                        <td class="numeric">@product.Revenue.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h6 mb-3">Catalog</h2>
+                <ul class="list-unstyled mb-0">
+                    <li class="d-flex justify-content-between py-1 border-bottom">
+                        <span>Active products</span>
+                        <span class="fw-semibold">@dashboard.ActiveProductCount</span>
+                    </li>
+                    <li class="d-flex justify-content-between py-1">
+                        <span>Low stock</span>
+                        <span class="fw-semibold @(dashboard.LowStockProductCount > 0 ? "text-danger" : "")">
+                            @dashboard.LowStockProductCount
+                        </span>
+                    </li>
+                </ul>
+                <a asp-page="/Manage/Products/Index" asp-route-shopId="@Model.CurrentShop.Id"
+                   class="btn btn-outline-secondary btn-sm mt-3">Manage products</a>
+            </div>
+        </div>
+    </div>
+</div>

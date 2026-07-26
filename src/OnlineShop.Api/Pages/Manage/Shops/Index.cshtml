@@ -1,0 +1,59 @@
+@page
+@model OnlineShop.Api.Pages.Manage.Shops.IndexModel
+@{
+    ViewData["Title"] = "Shops";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">
+        Shops
+        <partial name="_ConsistencyBadge" model="Model.Consistency" />
+    </h1>
+    <a asp-page="Create" class="btn btn-primary">New shop</a>
+</div>
+
+@if (Model.Shops.Count == 0)
+{
+    <div class="card"><div class="card-body empty-state">
+        <p class="mb-2">You have no shops yet.</p>
+        <a asp-page="Create" class="btn btn-primary btn-sm">Create your first shop</a>
+    </div></div>
+}
+else
+{
+    <div class="row g-3">
+        @foreach (var shop in Model.Shops)
+        {
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <h2 class="h6 mb-1">@shop.Name</h2>
+                            @if (!shop.IsActive)
+                            {
+                                <span class="badge bg-secondary">Inactive</span>
+                            }
+                        </div>
+                        <p class="small text-muted mb-3">
+                            <code>/shop/@shop.Slug</code> · @shop.CurrencyCode
+                        </p>
+                        <div class="d-flex gap-3 small mb-3">
+                            <span><strong>@shop.ProductCount</strong> products</span>
+                            <span><strong>@shop.OrderCount</strong> orders</span>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a asp-page="/Manage/Index" asp-route-shopId="@shop.Id"
+                               class="btn btn-sm btn-outline-primary">Dashboard</a>
+                            <a asp-page="/Manage/Products/Index" asp-route-shopId="@shop.Id"
+                               class="btn btn-sm btn-outline-secondary">Products</a>
+                            <a asp-page="Members" asp-route-shopId="@shop.Id"
+                               class="btn btn-sm btn-outline-secondary">Members</a>
+                            <a asp-page="/Storefront/Index" asp-route-slug="@shop.Slug"
+                               class="btn btn-sm btn-outline-secondary">Storefront</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

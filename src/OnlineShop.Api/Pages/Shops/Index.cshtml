@@ -1,0 +1,38 @@
+@page
+@model OnlineShop.Api.Pages.Shops.IndexModel
+@{
+    ViewData["Title"] = "Shops";
+}
+
+<h1 class="h4 mb-1">Shops</h1>
+<p class="text-muted small mb-4">
+    Every shop below belongs to a different tenant. Browsing one scopes the whole request to that
+    tenant; nothing from any other is reachable.
+</p>
+
+@if (Model.Shops.Count == 0)
+{
+    <div class="card"><div class="card-body empty-state">
+        <p class="mb-2">No shops have opened yet.</p>
+        <a asp-page="/Account/Register" class="btn btn-primary btn-sm">Open the first one</a>
+    </div></div>
+}
+else
+{
+    <div class="row g-3">
+        @foreach (var shop in Model.Shops)
+        {
+            <div class="col-md-6 col-lg-4">
+                <a class="card h-100 text-decoration-none text-reset product-card"
+                   asp-page="/Storefront/Index" asp-route-slug="@shop.Slug">
+                    <div class="card-body">
+                        <h2 class="h6 mb-1">@shop.Name</h2>
+                        <p class="small text-muted mb-2">/shop/@shop.Slug</p>
+                        <span class="badge bg-light text-dark">@shop.ActiveProductCount products</span>
+                        <span class="badge bg-light text-dark">@shop.CurrencyCode</span>
+                    </div>
+                </a>
+            </div>
+        }
+    </div>
+}

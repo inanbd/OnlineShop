@@ -1,0 +1,12 @@
+@model OnlineShop.Domain.Ordering.OrderStatus
+@{
+    var css = Model switch
+    {
+        OnlineShop.Domain.Ordering.OrderStatus.Pending => "bg-warning text-dark",
+        OnlineShop.Domain.Ordering.OrderStatus.Paid => "bg-info text-dark",
+        OnlineShop.Domain.Ordering.OrderStatus.Fulfilled => "bg-success",
+        OnlineShop.Domain.Ordering.OrderStatus.Cancelled => "bg-secondary",
+        _ => "bg-light text-dark",
+    };
+}
+<span class="badge @css">@Model</span>

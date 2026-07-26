@@ -1,0 +1,67 @@
+@page
+@using OnlineShop.Application.Abstractions.Identity
+@{
+    ViewData["Title"] = "Home";
+    var isMerchant = User.IsInRole(AppRoles.Merchant);
+}
+
+<div class="px-4 py-5 my-3 text-center">
+    <h1 class="display-5 fw-bold">OnlineShop</h1>
+    <div class="col-lg-7 mx-auto">
+        <p class="lead mb-4">
+            A multi-tenant shop built on a strict read/write database split: every query reads
+            <code>ReadConnection</code>, every command writes <code>WriteConnection</code>, and the
+            split is enforced by the process rather than by convention.
+        </p>
+        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+            @if (isMerchant)
+            {
+                <a asp-page="/Manage/Index" class="btn btn-primary btn-lg px-4">Go to dashboard</a>
+            }
+            else
+            {
+                <a asp-page="/Account/Register" class="btn btn-primary btn-lg px-4">Open a shop</a>
+            }
+            <a asp-page="/Shops/Index" class="btn btn-outline-secondary btn-lg px-4">Browse shops</a>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mt-2">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h6">Reads go to the replica</h2>
+                <p class="small text-muted mb-0">
+                    Catalog browsing, order history and analytics are served from
+                    <code>ReadConnection</code>, keeping heavy reporting scans off the primary.
+                    Pages show a badge saying which database answered them.
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h6">Writes are one transaction</h2>
+                <p class="small text-muted mb-0">
+                    Placing an order writes the order, its items, the stock reservation, the payment,
+                    the cart closure and the status history under a single transaction on the primary.
+                    Any failure rolls back all six.
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h6">Read-after-write is explicit</h2>
+                <p class="small text-muted mb-0">
+                    A replica may lag. The few reads that cannot tolerate that &mdash; an order
+                    confirmation, a product you just saved &mdash; ask for strong consistency and are
+                    routed to the primary, with the reason recorded in code.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>

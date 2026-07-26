@@ -1,0 +1,23 @@
+@*
+    Shows which database served the page.
+
+    The read/write split is what this codebase is about, so rather than leaving
+    it implicit, screens say out loud whether they were served by the replica or
+    had to reach the primary for read-after-write consistency.
+*@
+@model OnlineShop.Application.Abstractions.Persistence.ReadConsistency
+
+@if (Model == OnlineShop.Application.Abstractions.Persistence.ReadConsistency.Strong)
+{
+    <span class="badge rounded-pill consistency-badge consistency-badge--primary"
+          title="Served from WriteConnection. This row was written moments ago, so the replica may not have it yet.">
+        primary &middot; strong
+    </span>
+}
+else
+{
+    <span class="badge rounded-pill consistency-badge consistency-badge--replica"
+          title="Served from ReadConnection, which may be a read replica.">
+        replica &middot; eventual
+    </span>
+}
