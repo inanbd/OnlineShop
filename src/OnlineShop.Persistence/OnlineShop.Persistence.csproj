@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <!--
+      Dapper + the SQL Server ADO.NET driver. No Entity Framework anywhere in
+      the solution; OnlineShop.Architecture.Tests asserts that.
+
+      Microsoft.Data.SqlClient is the supported successor to the older
+      System.Data.SqlClient package. The `providerName="System.Data.SqlClient"`
+      string in the connectionStrings sample is a configuration token, not a
+      package choice - see docs/read-write-database-strategy.md.
+    -->
+    <PackageReference Include="Dapper" Version="2.1.35" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OnlineShop.Application\OnlineShop.Application.csproj" />
+    <ProjectReference Include="..\OnlineShop.Domain\OnlineShop.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="OnlineShop.Architecture.Tests" />
+  </ItemGroup>
+
+</Project>

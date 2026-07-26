@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The domain layer must never reference a data-access package.
+    Rule 13: "Database connection management belongs in the
+    Persistence/Infrastructure layer, never Domain or Controllers."
+    This project intentionally has zero PackageReference entries;
+    OnlineShop.Architecture.Tests asserts that it stays that way.
+  -->
+
+</Project>

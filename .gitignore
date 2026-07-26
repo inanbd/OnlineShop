@@ -1,0 +1,27 @@
+## .NET build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+*.user
+*.suo
+
+## Test output
+[Tt]est[Rr]esult*/
+coverage*.json
+coverage*.xml
+*.trx
+
+## IDE
+.vs/
+.vscode/
+.idea/
+*.swp
+
+## Local configuration that may hold real connection strings.
+## Never commit real ReadConnection / WriteConnection values.
+appsettings.*.local.json
+appsettings.Production.json
+*.local.config
+secrets.json

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="MediatR" Version="12.4.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OnlineShop.Domain\OnlineShop.Domain.csproj" />
+  </ItemGroup>
+
+  <!--
+    No Dapper, no SqlClient and no Entity Framework here. The application layer
+    depends on persistence *ports* (IProductQueries, IProductRepository,
+    IUnitOfWork) and never on a concrete database driver.
+  -->
+
+</Project>
