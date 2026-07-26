@@ -396,7 +396,50 @@ depend on ports, not on the persistence assembly.
 
 ---
 
-## 9. Adding to the codebase
+## 9. How this is verified
+
+The rules above are checked two ways.
+
+**Without a database.** `OnlineShop.Architecture.Tests` reflects over the
+compiled assemblies: every request is a query or a command, every SQL constant
+mentions `@TenantId` and contains no quoted literal, no repository holds a
+connection factory, no endpoint touches a connection, Entity Framework appears
+nowhere. It also parses every statement and every schema batch with SQL Server's
+own T-SQL parser, so a malformed statement fails the build rather than a request.
+
+**With a real database.** `OnlineShop.Integration.Tests` starts SQL Server 2022
+and creates two databases — `OnlineShop_Primary` behind `WriteConnection` and
+`OnlineShop_Replica` behind `ReadConnection` — with nothing synchronising them.
+Replication lag is therefore unbounded and deterministic, which turns claims
+into observations:
+
+* a command changes the primary and leaves the replica byte-for-byte unchanged;
+* a query returns a row planted *only* in the replica, so it demonstrably read
+  the replica;
+* a read issued straight after a write misses, `ReadConsistency.Strong` finds
+  it, and the ordinary path works once replication runs;
+* when the primary and replica are made to disagree about the same row, each
+  consistency level returns the value from the database it is supposed to use;
+* a command prices an order from the primary even when the replica says
+  otherwise;
+* every query still succeeds when the replica is set `READ_ONLY` at the server,
+  which is the strongest available evidence that the read path performs no
+  writes;
+* six simultaneous checkouts for one unit of stock produce exactly one order,
+  and eight concurrent checkouts receive eight distinct order numbers;
+* a failure at step three of order placement leaves no order, no items, no
+  payment, no history and no reservation;
+* cross-tenant reads, updates, deletes and checkouts all fail, and the composite
+  foreign keys reject a cross-tenant row inserted by hand.
+
+Both suites have been checked against deliberately broken implementations —
+removing the tenant predicate, removing the oversell guard, misrouting
+`ReadConsistency.Strong`, giving a repository its own connection factory — and
+each mutation was caught by several tests.
+
+---
+
+## 10. Adding to the codebase
 
 **A new read.** Add a method to the relevant `I*Queries` interface taking
 `Guid tenantId`. Implement it with `CreateReadConnection()`. Include
